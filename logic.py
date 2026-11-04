@@ -89,6 +89,13 @@ def checkBingoSlot(slot: BingoSlot, checked: bool)->BingoSlot|None:
         res = slot
     return res
 
+def searchBingos(search: str)->list[Bingo]:
+    res = []
+    with Session(engine) as session:
+        stmt = select(Bingo).where(col(Bingo.name).like(f"%{search}%"))
+        res = session.exec(stmt).all()
+    return res
+
 def convertBingoToOutput(bingo: Bingo, withSlots: bool = False)->BingoOutput:
     o = BingoOutput(**bingo.model_dump())
     o.private = (bingo.pwd is not None)

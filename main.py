@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import Body, FastAPI, HTTPException, Response, status
 from pydantic import BaseModel
 
-from logic import checkBingoSlot, convertBingoToOutput, convertSlotToOutput, createBingo, findBingoBySlug, findBingoSlot, getAllBingos, initialize, updateBingo, updateBingoSlot
+from logic import checkBingoSlot, convertBingoToOutput, convertSlotToOutput, createBingo, findBingoBySlug, findBingoSlot, getAllBingos, initialize, searchBingos, updateBingo, updateBingoSlot
 from schemas import BingoInput, BingoOutput, BingoSlotOutput, BingosList
 
 @asynccontextmanager
@@ -90,6 +90,10 @@ async def check(slug: str, slot: int, checked: Annotated[bool, Body()], response
         response.status_code = status.HTTP_404_NOT_FOUND
         return None
 
-@app.get("/search/{search}")
-async def search(search):
-    return {"message": f"searched {search}"}
+@app.get("/search/{search}", name="Search bingos by name", response_model=BingosList)
+async def search(search: str):
+    res = []
+    bingos = searchBingos(search)
+    for b in bingos:
+        res.append(convertBingoToOutput(b, False))
+    return {"bingos": res}
