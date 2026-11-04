@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response, status
 from pydantic import BaseModel
 
-from logic import createBingo, getAllBingos, initialize
-from schemas import BingoInput, BingoOutput, BingoSlotOutput
+from logic import convertBingoToOutput, createBingo, findBingoBySlug, getAllBingos, initialize
+from schemas import BingoInput, BingoOutput, BingoSlotOutput, BingosList
 
 class ClearText(BaseModel):
     value: str
@@ -18,13 +18,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-@app.get("/")
+@app.get("/", response_model=BingosList)
 async def index():
-    return {"bingos": getAllBingos()}
+    bingos = getAllBingos()
+    res = []
+    for b in bingos:
+        res.append(convertBingoToOutput(b, False))
+    return {"bingos": res}
 
-@app.get("/bingo/{slug}")
-async def getBingo(slug):
-    pass
+@app.get("/bingo/{slug}", response_model=BingoOutput|None)
+async def getBingo(slug: str, response: Response):
+    b = findBingoBySlug(slug)
+    if b:
+        return convertBingoToOutput(b, True)
+    else:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return None
 
 @app.put("/bingo", response_model=BingoOutput)
 async def create(bingo: BingoInput):
@@ -32,10 +41,7 @@ async def create(bingo: BingoInput):
     if r is None:
         raise HTTPException(status_code=400, detail="Invalid Bingo input")
     else:
-        bingoOutput = BingoOutput(**r.model_dump())
-        for s in r.slots:
-            bingoOutput.slots.append(BingoSlotOutput(**s.model_dump()))
-        return bingoOutput
+        return convertBingoToOutput(r, True)
 
 @app.get("/search/{search}")
 async def search(search):

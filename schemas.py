@@ -21,3 +21,6 @@ class BingoSlotOutput(BaseModel):
     slot_id: int
     value: str
     checked: bool
+
+class BingosList(BaseModel):
+    bingos: list[BingoOutput]
