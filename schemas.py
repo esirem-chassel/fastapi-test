@@ -15,6 +15,7 @@ class BingoOutput(BaseModel):
     size: int
     slug: str
     slots: list["BingoSlotOutput"] = []
+    private: bool = False
 
 class BingoSlotOutput(BaseModel):
     bingo_id: int

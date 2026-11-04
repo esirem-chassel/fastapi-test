@@ -3,11 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Response, status
 from pydantic import BaseModel
 
-from logic import convertBingoToOutput, createBingo, findBingoBySlug, getAllBingos, initialize
+from logic import checkBingoSlot, convertBingoToOutput, convertSlotToOutput, createBingo, findBingoBySlug, findBingoSlot, getAllBingos, initialize, updateBingo, updateBingoSlot
 from schemas import BingoInput, BingoOutput, BingoSlotOutput, BingosList
-
-class ClearText(BaseModel):
-    value: str
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,10 +40,55 @@ async def create(bingo: BingoInput):
     else:
         return convertBingoToOutput(r, True)
 
+@app.post("/bingo/{slug}", response_model=BingoOutput)
+async def update(slug: str, bingo: BingoInput, response: Response, pwd: str|None = None):
+    b = findBingoBySlug(slug)
+    if b:
+        if b.pwd == pwd:
+            return convertBingoToOutput(updateBingo(b, bingo))
+        else:
+            response.status_code = status.HTTP_403_FORBIDDEN
+            return None
+    else:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return None
+
+@app.post("/bingo/{slug}/{slot}", response_model=BingoSlotOutput)
+async def update(slug: str, slot: int, value: str, response: Response, pwd: str|None = None):
+    b = findBingoBySlug(slug)
+    if b:
+        if b.pwd == pwd:
+            s = findBingoSlot(b, slot)
+            if s is not None:
+                return convertSlotToOutput(updateBingoSlot(s, value))
+            else:
+                response.status_code = status.HTTP_404_NOT_FOUND
+                return None
+        else:
+            response.status_code = status.HTTP_403_FORBIDDEN
+            return None
+    else:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return None
+
+@app.post("/bingo/{slug}/{slot}/check", response_model=BingoSlotOutput)
+async def check(slug: str, slot: int, checked: bool, response: Response, pwd: str|None = None):
+    b = findBingoBySlug(slug)
+    if b:
+        if b.pwd == pwd:
+            s = findBingoSlot(b, slot)
+            if s is not None:
+                return convertSlotToOutput(checkBingoSlot(s, checked))
+            else:
+                response.status_code = status.HTTP_404_NOT_FOUND
+                return None
+        else:
+            response.status_code = status.HTTP_403_FORBIDDEN
+            return None
+    else:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return None
+
 @app.get("/search/{search}")
 async def search(search):
     return {"message": f"searched {search}"}
-
-@app.post("/register")
-async def register(clear: ClearText):
-    return clear
