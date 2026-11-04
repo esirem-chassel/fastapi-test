@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Response, status
+from fastapi import Body, FastAPI, HTTPException, Response, status
 from pydantic import BaseModel
 
 from logic import checkBingoSlot, convertBingoToOutput, convertSlotToOutput, createBingo, findBingoBySlug, findBingoSlot, getAllBingos, initialize, updateBingo, updateBingoSlot
@@ -15,7 +16,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-@app.get("/", response_model=BingosList)
+@app.get("/", name="List all bingos", response_model=BingosList)
 async def index():
     bingos = getAllBingos()
     res = []
@@ -23,7 +24,7 @@ async def index():
         res.append(convertBingoToOutput(b, False))
     return {"bingos": res}
 
-@app.get("/bingo/{slug}", response_model=BingoOutput|None)
+@app.get("/bingo/{slug}", name="Get a singular bingo grid with slots", response_model=BingoOutput|None)
 async def getBingo(slug: str, response: Response):
     b = findBingoBySlug(slug)
     if b:
@@ -32,7 +33,7 @@ async def getBingo(slug: str, response: Response):
         response.status_code = status.HTTP_404_NOT_FOUND
         return None
 
-@app.put("/bingo", response_model=BingoOutput)
+@app.put("/bingo", name="Create a new bingo", response_model=BingoOutput)
 async def create(bingo: BingoInput):
     r = createBingo(bingo)
     if r is None:
@@ -40,8 +41,8 @@ async def create(bingo: BingoInput):
     else:
         return convertBingoToOutput(r, True)
 
-@app.post("/bingo/{slug}", response_model=BingoOutput)
-async def update(slug: str, bingo: BingoInput, response: Response, pwd: str|None = None):
+@app.patch("/bingo/{slug}", name="Change bingo details such as name and password", response_model=BingoOutput)
+async def update(slug: str, bingo: BingoInput, response: Response, pwd: Annotated[str|None, Body()] = None):
     b = findBingoBySlug(slug)
     if b:
         if b.pwd == pwd:
@@ -53,8 +54,8 @@ async def update(slug: str, bingo: BingoInput, response: Response, pwd: str|None
         response.status_code = status.HTTP_404_NOT_FOUND
         return None
 
-@app.post("/bingo/{slug}/{slot}", response_model=BingoSlotOutput)
-async def update(slug: str, slot: int, value: str, response: Response, pwd: str|None = None):
+@app.post("/bingo/{slug}/{slot}", name="Update a slot value (text)", response_model=BingoSlotOutput)
+async def update(slug: str, slot: int, value: Annotated[str, Body()], response: Response, pwd: Annotated[str|None, Body()] = None):
     b = findBingoBySlug(slug)
     if b:
         if b.pwd == pwd:
@@ -71,8 +72,8 @@ async def update(slug: str, slot: int, value: str, response: Response, pwd: str|
         response.status_code = status.HTTP_404_NOT_FOUND
         return None
 
-@app.post("/bingo/{slug}/{slot}/check", response_model=BingoSlotOutput)
-async def check(slug: str, slot: int, checked: bool, response: Response, pwd: str|None = None):
+@app.post("/bingo/{slug}/{slot}/check", name="Check or uncheck a slot", response_model=BingoSlotOutput)
+async def check(slug: str, slot: int, checked: Annotated[bool, Body()], response: Response, pwd: Annotated[str|None, Body()] = None):
     b = findBingoBySlug(slug)
     if b:
         if b.pwd == pwd:
