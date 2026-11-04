@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 class BingoInput(BaseModel):
     name: str
-    pwd: str | None
+    pwd: str | None = None
     size: int = 5
 
 class BingoSlotInput(BaseModel):
@@ -14,7 +14,7 @@ class BingoOutput(BaseModel):
     name: str
     size: int
     slug: str
-    slots: list["BingoSlotOutput"]
+    slots: list["BingoSlotOutput"] = []
 
 class BingoSlotOutput(BaseModel):
     bingo_id: int
